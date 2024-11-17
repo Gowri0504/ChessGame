@@ -2,9 +2,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import javax.swing.*;
-import java.io.File;
 
-public class ChessGame extends Frame implements MouseListener {
+public class cg extends Frame implements MouseListener {
     private static final int TILE_SIZE = 80;
     private static final int BOARD_SIZE = TILE_SIZE * 8;
     private static final String[] INITIAL_PIECES = {
@@ -25,10 +24,16 @@ public class ChessGame extends Frame implements MouseListener {
     private Set<String> whitePieces;
     private Set<String> blackPieces;
     private Set<String> validMoves;
-
     private Map<String, Image> pieceImages;
+    private boolean playWithComputer;
+    private boolean isGameOver = false;
+    private Player currentPlayer;
+    private Player whitePlayer;
+    private Player blackPlayer;
 
-    public ChessGame() {
+    // Constructor to initialize the game
+    public cg(boolean playWithComputer) {
+        this.playWithComputer = playWithComputer;
         board = new String[8][8];
         whitePieces = new HashSet<>(Arrays.asList("P", "R", "N", "B", "Q", "K"));
         blackPieces = new HashSet<>(Arrays.asList("p", "r", "n", "b", "q", "k"));
@@ -36,6 +41,11 @@ public class ChessGame extends Frame implements MouseListener {
 
         // Load piece images from the same directory as the source code
         loadPieceImages();
+
+        // Initialize players (Human vs Human or Human vs Computer)
+        whitePlayer = new HumanPlayer(true);
+        blackPlayer = playWithComputer ? new ComputerPlayer(false) : new HumanPlayer(false);
+        currentPlayer = whitePlayer;
 
         setSize(BOARD_SIZE, BOARD_SIZE);
         setTitle("Chess Game");
@@ -48,6 +58,7 @@ public class ChessGame extends Frame implements MouseListener {
         });
     }
 
+    // Initialize the chessboard
     private void initializeBoard() {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
@@ -56,25 +67,24 @@ public class ChessGame extends Frame implements MouseListener {
         }
     }
 
+    // Load piece images
     private void loadPieceImages() {
         pieceImages = new HashMap<>();
-
-        // Define relative file paths for all pieces
-        pieceImages.put("wP", Toolkit.getDefaultToolkit().getImage("wp.png")); // White Pawn
-        pieceImages.put("wR", Toolkit.getDefaultToolkit().getImage("wr.png")); // White Rook
-        pieceImages.put("wN", Toolkit.getDefaultToolkit().getImage("wn.png")); // White Knight
-        pieceImages.put("wB", Toolkit.getDefaultToolkit().getImage("wb.png")); // White Bishop
-        pieceImages.put("wQ", Toolkit.getDefaultToolkit().getImage("wq.png")); // White Queen
-        pieceImages.put("wK", Toolkit.getDefaultToolkit().getImage("wk.png")); // White King
-
-        pieceImages.put("bP", Toolkit.getDefaultToolkit().getImage("bp.png")); // Black Pawn
-        pieceImages.put("bR", Toolkit.getDefaultToolkit().getImage("br.png")); // Black Rook
-        pieceImages.put("bN", Toolkit.getDefaultToolkit().getImage("bn.png")); // Black Knight
-        pieceImages.put("bB", Toolkit.getDefaultToolkit().getImage("bb.png")); // Black Bishop
-        pieceImages.put("bQ", Toolkit.getDefaultToolkit().getImage("bq.png")); // Black Queen
-        pieceImages.put("bK", Toolkit.getDefaultToolkit().getImage("bk.png")); // Black King
+        pieceImages.put("wP", Toolkit.getDefaultToolkit().getImage("wp.png"));
+        pieceImages.put("wR", Toolkit.getDefaultToolkit().getImage("wr.png"));
+        pieceImages.put("wN", Toolkit.getDefaultToolkit().getImage("wn.png"));
+        pieceImages.put("wB", Toolkit.getDefaultToolkit().getImage("wb.png"));
+        pieceImages.put("wQ", Toolkit.getDefaultToolkit().getImage("wq.png"));
+        pieceImages.put("wK", Toolkit.getDefaultToolkit().getImage("wk.png"));
+        pieceImages.put("bP", Toolkit.getDefaultToolkit().getImage("bp.png"));
+        pieceImages.put("bR", Toolkit.getDefaultToolkit().getImage("br.png"));
+        pieceImages.put("bN", Toolkit.getDefaultToolkit().getImage("bn.png"));
+        pieceImages.put("bB", Toolkit.getDefaultToolkit().getImage("bb.png"));
+        pieceImages.put("bQ", Toolkit.getDefaultToolkit().getImage("bq.png"));
+        pieceImages.put("bK", Toolkit.getDefaultToolkit().getImage("bk.png"));
     }
 
+    // Paint the board and pieces
     public void paint(Graphics g) {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
@@ -127,6 +137,7 @@ public class ChessGame extends Frame implements MouseListener {
         return null; // For empty tiles
     }
 
+    // Mouse click event handler to select and move pieces
     public void mouseClicked(MouseEvent e) {
         int x = e.getX() / TILE_SIZE;
         int y = e.getY() / TILE_SIZE;
@@ -164,24 +175,153 @@ public class ChessGame extends Frame implements MouseListener {
                 repaint();
             }
         }
+
+        // Handle Computer's Move (if playing against the computer)
+        if (playWithComputer && !isWhiteTurn && !isGameOver) {
+            makeComputerMove();
+        }
     }
 
-    // Simplified valid moves calculation for all pieces (adjust to your needs)
+    private void makeComputerMove() {
+        if (currentPlayer instanceof ComputerPlayer) {
+            // Simulate computer move (this is simplified, you would implement a real AI here)
+            System.out.println("Computer is making a move...");
+            // In a real implementation, you would select a valid move for the computer here
+            isWhiteTurn = true; // Switch back to human player after the computer move
+            repaint();
+        }
+    }
+
     private Set<String> calculateValidMoves(String piece, int x, int y) {
         Set<String> moves = new HashSet<>();
         if (piece.equals("P") || piece.equals("p")) {
-            int direction = piece.equals("P") ? -1 : 1;
-            if (y + direction >= 0 && y + direction < 8) {
-                if (board[y + direction][x].equals(".")) {
-                    moves.add(x + "," + (y + direction));
+            int direction = piece.equals("P") ? -1 : 1;  // White moves up, black moves down
+            // Regular move one square forward
+            if (y + direction >= 0 && y + direction < 8 && board[y + direction][x].equals(".")) {
+                moves.add(x + "," + (y + direction));
+            }
+            // Capture diagonally
+            if (x + 1 < 8 && y + direction >= 0 && y + direction < 8 && !board[y + direction][x + 1].equals(".") &&
+                (Character.isLowerCase(board[y + direction][x + 1].charAt(0)) != (piece.equals("P")))) {
+                moves.add((x + 1) + "," + (y + direction));
+            }
+            if (x - 1 >= 0 && y + direction >= 0 && y + direction < 8 && !board[y + direction][x - 1].equals(".") &&
+                (Character.isLowerCase(board[y + direction][x - 1].charAt(0)) != (piece.equals("P")))) {
+                moves.add((x - 1) + "," + (y + direction));
+            }
+            // Special move (two squares forward on first move)
+            if ((piece.equals("P") && y == 6) || (piece.equals("p") && y == 1)) {
+                if (board[y + direction][x].equals(".") && board[y + direction * 2][x].equals(".")) {
+                    moves.add(x + "," + (y + direction * 2));
                 }
-                // Capture diagonally
-                if (x + 1 < 8 && !board[y + direction][x + 1].equals(".")) {
-                    moves.add((x + 1) + "," + (y + direction));
+            }
+        }
+        else if (piece.equals("N") || piece.equals("n")) {  // Knight
+            int[] dx = {-2, -1, 1, 2, 2, 1, -1, -2};
+            int[] dy = {1, 2, 2, 1, -1, -2, -2, -1};
+            for (int i = 0; i < 8; i++) {
+                int newX = x + dx[i];
+                int newY = y + dy[i];
+                if (newX >= 0 && newX < 8 && newY >= 0 && newY < 8) {
+                    String target = board[newY][newX];
+                    if (target.equals(".") || (Character.isLowerCase(target.charAt(0)) != Character.isLowerCase(piece.charAt(0)))) {
+                        moves.add(newX + "," + newY);
+                    }
                 }
-                if (x - 1 >= 0 && !board[y + direction][x - 1].equals(".")) {
-                    moves.add((x - 1) + "," + (y + direction));
+            }
+        }
+        else if (piece.equals("R") || piece.equals("r")) {  // Rook
+            moves.addAll(calculateStraightMoves(x, y, piece));
+        }
+        else if (piece.equals("B") || piece.equals("b")) {  // Bishop
+            moves.addAll(calculateDiagonalMoves(x, y, piece));
+        }
+        else if (piece.equals("Q") || piece.equals("q")) {  // Queen
+            moves.addAll(calculateStraightMoves(x, y, piece));
+            moves.addAll(calculateDiagonalMoves(x, y, piece));
+        }
+        else if (piece.equals("K") || piece.equals("k")) {  // King
+            int[] dx = {-1, 0, 1, 1, 1, 0, -1, -1};
+            int[] dy = {-1, -1, -1, 0, 1, 1, 1, 0};
+            for (int i = 0; i < 8; i++) {
+                int newX = x + dx[i];
+                int newY = y + dy[i];
+                if (newX >= 0 && newX < 8 && newY >= 0 && newY < 8) {
+                    String target = board[newY][newX];
+                    if (target.equals(".") || (Character.isLowerCase(target.charAt(0)) != Character.isLowerCase(piece.charAt(0)))) {
+                        moves.add(newX + "," + newY);
+                    }
                 }
+            }
+        }
+        return moves;
+    }
+
+    // Helper methods to calculate valid moves for straight-moving pieces (Rook, Queen)
+    private Set<String> calculateStraightMoves(int x, int y, String piece) {
+        Set<String> moves = new HashSet<>();
+        String[] directions = {"up", "down", "left", "right"};
+        for (String direction : directions) {
+            int i = 1;
+            while (true) {
+                int newX = x, newY = y;
+                if (direction.equals("up")) newY -= i;
+                if (direction.equals("down")) newY += i;
+                if (direction.equals("left")) newX -= i;
+                if (direction.equals("right")) newX += i;
+                if (newX < 0 || newY < 0 || newX >= 8 || newY >= 8) break;
+
+                String target = board[newY][newX];
+                if (target.equals(".")) {
+                    moves.add(newX + "," + newY);
+                } else {
+                    if ((Character.isLowerCase(target.charAt(0)) != Character.isLowerCase(piece.charAt(0)))) {
+                        moves.add(newX + "," + newY);
+                    }
+                    break;
+                }
+                i++;
+            }
+        }
+        return moves;
+    }
+
+    // Helper methods to calculate diagonal-moving pieces (Bishop, Queen)
+    private Set<String> calculateDiagonalMoves(int x, int y, String piece) {
+        Set<String> moves = new HashSet<>();
+        String[] directions = {"up-left", "up-right", "down-left", "down-right"};
+        for (String direction : directions) {
+            int i = 1;
+            while (true) {
+                int newX = x, newY = y;
+                if (direction.equals("up-left")) {
+                    newX -= i;
+                    newY -= i;
+                }
+                if (direction.equals("up-right")) {
+                    newX += i;
+                    newY -= i;
+                }
+                if (direction.equals("down-left")) {
+                    newX -= i;
+                    newY += i;
+                }
+                if (direction.equals("down-right")) {
+                    newX += i;
+                    newY += i;
+                }
+                if (newX < 0 || newY < 0 || newX >= 8 || newY >= 8) break;
+
+                String target = board[newY][newX];
+                if (target.equals(".")) {
+                    moves.add(newX + "," + newY);
+                } else {
+                    if ((Character.isLowerCase(target.charAt(0)) != Character.isLowerCase(piece.charAt(0)))) {
+                        moves.add(newX + "," + newY);
+                    }
+                    break;
+                }
+                i++;
             }
         }
         return moves;
@@ -193,7 +333,41 @@ public class ChessGame extends Frame implements MouseListener {
     public void mouseEntered(MouseEvent e) {}
     public void mouseExited(MouseEvent e) {}
 
+    // Player class and subclasses for Human and Computer players
+    abstract class Player {
+        boolean isWhite;
+
+        Player(boolean isWhite) {
+            this.isWhite = isWhite;
+        }
+
+        abstract void makeMove();
+    }
+
+    class HumanPlayer extends Player {
+        HumanPlayer(boolean isWhite) {
+            super(isWhite);
+        }
+
+        @Override
+        void makeMove() {
+            // Human player makes move (already handled by mouse events)
+        }
+    }
+
+    class ComputerPlayer extends Player {
+        ComputerPlayer(boolean isWhite) {
+            super(isWhite);
+        }
+
+        @Override
+        void makeMove() {
+            // Implement simple AI for computer move here
+        }
+    }
+
+    // Main method to start the game
     public static void main(String[] args) {
-        new ChessGame();
+        new cg(true); // Change to `new cg(false)` for Human vs Human
     }
 }
